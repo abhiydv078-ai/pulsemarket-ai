@@ -4,7 +4,22 @@ import { serveStatic } from 'hono/cloudflare-workers'
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
 
-app.use('/static/*', serveStatic({ root: './' }))
+// In production, `__STATIC_CONTENT_MANIFEST` is injected by the build.
+// In dev (vite dev server), it may be undefined, and Vite serves `/public` directly.
+const staticManifest =
+  typeof __STATIC_CONTENT_MANIFEST !== 'undefined'
+    ? (__STATIC_CONTENT_MANIFEST as unknown as string) || undefined
+    : undefined
+
+if (staticManifest) {
+  app.use(
+    '/static/*',
+    serveStatic({
+      root: './',
+      manifest: staticManifest,
+    })
+  )
+}
 app.use('/api/*', cors())
 
 // ── API: Product Search ──────────────────────────────────────────────────────
